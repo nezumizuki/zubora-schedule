@@ -25,6 +25,13 @@
   .privacy { font-size: 13px; color: #ccc; background: #25272d; border: 1px solid #3a3c44; border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
   .sample { border: 1px solid #f2c14e; border-radius: 8px; padding: 10px 12px; background: #2b281f; font-size: 13px; color: #f5e3b0; }
   .sample .btns { margin-top: 8px; }
+
+  /* 右下の小さな支援の案内(操作のじゃまにならないよう、小さく・うすめに) */
+  body { padding-bottom: 72px; }
+  .support { position: fixed; right: 12px; bottom: 12px; z-index: 5; max-width: 300px; font-size: 12px; line-height: 1.5; color: #bbb; background: rgba(37,39,45,.92); border: 1px solid #3a3c44; border-radius: 8px; padding: 6px 10px; opacity: .85; }
+  .support:hover, .support:focus-within { opacity: 1; }
+  .support p { margin: 0; }
+  .support .by2 { color: #888; }
   .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
   .preview { flex: 1 1 640px; max-width: 960px; min-width: 0; position: sticky; top: 16px; }
   /* 縦長のときに画面からはみ出さないよう、高さにも上限をつける */
@@ -79,6 +86,8 @@
     body { padding: 10px; }
     header h1 { font-size: 19px; }
     .privacy { font-size: 12px; padding: 6px 10px; }
+    body { padding-bottom: 72px; }
+    .support { position: static; max-width: none; margin-top: 16px; opacity: 1; }
     .wrap { gap: 12px; }
     /* プレビューは上に固定せず、ふつうにスクロールさせる */
     .preview { position: static; flex-basis: 100%; max-width: 100%; }
@@ -221,9 +230,16 @@
         <input type="file" id="importJson" accept=".json,application/json" hidden>
       </div>
       <p class="note">入力した内容は、このブラウザの中だけに保存されていて、どこにも送られないよ。そのかわり、ブラウザの履歴やデータを消したり、別のブラウザ・スマホで開いたり、ツールのファイルを動かしたりすると消えちゃう。ときどき保存しておくと安心。保存したファイルを読み込めば、別のブラウザでも続きから使えるよ。</p>
+      <p class="note">※ 文字の表示にだけ Google Fonts を使っています(入力した内容は送られません)。</p>
     </fieldset>
   </div>
 </div>
+
+<!-- 支援とBOOTHへの案内(PCは右下に固定、スマホはページのいちばん下) -->
+<footer class="support">
+  <p><a href="https://nezumizuki.booth.pm/items/9110946" target="_blank" rel="noopener">🐭 使ってくれてありがとう！気に入ったら、BOOTHで支援してもらえるとうれしいです</a></p>
+  <p class="by2">作った人：<a href="https://x.com/unanoura0" target="_blank" rel="noopener">うな</a></p>
+</footer>
 
 <script>
 // ===== 設定 =====
