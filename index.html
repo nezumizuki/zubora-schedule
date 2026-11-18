@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
   /* ===== 画面の見た目(CSS) ===== */
+  /* hidden を付けたものは、ほかの指定に負けずに必ず隠す */
+  [hidden] { display: none !important; }
   body {
     margin: 0;
     padding: 16px;
@@ -19,12 +21,17 @@
   header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
   header .by { font-size: 13px; color: #999; }
   header a { color: #5cc8ff; }
+  a { color: #5cc8ff; }
+  .privacy { font-size: 13px; color: #ccc; background: #25272d; border: 1px solid #3a3c44; border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
+  .sample { border: 1px solid #f2c14e; border-radius: 8px; padding: 10px 12px; background: #2b281f; font-size: 13px; color: #f5e3b0; }
+  .sample .btns { margin-top: 8px; }
   .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-  .preview { flex: 1 1 640px; max-width: 960px; position: sticky; top: 16px; }
+  .preview { flex: 1 1 640px; max-width: 960px; min-width: 0; position: sticky; top: 16px; }
   /* 縦長のときに画面からはみ出さないよう、高さにも上限をつける */
   canvas { display: block; max-width: 100%; max-height: 80vh; width: auto; height: auto; border-radius: 8px; background: #000; margin: 0 auto; }
-  .panel { flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; }
-  fieldset { border: 1px solid #444; border-radius: 8px; padding: 10px 12px; margin: 0; }
+  .panel { flex: 1 1 420px; max-width: 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+  fieldset { border: 1px solid #444; border-radius: 8px; padding: 10px 12px; margin: 0; min-width: 0; }
+  input[type=file] { max-width: 100%; color: #999; }
   legend { padding: 0 6px; font-weight: bold; }
   label { font-size: 13px; color: #bbb; }
   input[type=text], input[type=date], input[type=time] { box-sizing: border-box; padding: 5px 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font-size: 14px; }
@@ -36,7 +43,7 @@
   button.active { border-color: #5cc8ff; color: #5cc8ff; font-weight: bold; }
   .big { padding: 12px; font-size: 16px; font-weight: bold; border: none; background: #f2c14e; color: #222; flex: 1; }
   .drop { border: 2px dashed #555; border-radius: 8px; padding: 10px; text-align: center; font-size: 13px; color: #aaa; }
-  .drop.over { border-color: #5cc8ff; color: #5cc8ff; }
+  .drop.over, fieldset.over { border-color: #5cc8ff; color: #5cc8ff; }
 
   /* プロフィールの入力欄 */
   .grid { display: grid; grid-template-columns: 7em 1fr; gap: 6px 8px; align-items: center; }
@@ -65,12 +72,13 @@
   .games label.on { color: #10141a; font-weight: bold; }
   .memo { width: 100%; margin-top: 8px; }
   .day.off .games, .day.off .memo, .day.off input[type=time] { display: none; }
-  .gameText { width: 100%; box-sizing: border-box; min-height: 110px; margin-top: 8px; padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font: 14px "Yu Gothic UI", "Meiryo", sans-serif; resize: vertical; }
+  .gameText { width: 100%; box-sizing: border-box; min-height: 150px; margin-top: 6px; padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font: 14px "Yu Gothic UI", "Meiryo", sans-serif; resize: vertical; }
 
   /* ===== スマホ(画面がせまいとき) ===== */
   @media (max-width: 760px) {
     body { padding: 10px; }
     header h1 { font-size: 19px; }
+    .privacy { font-size: 12px; padding: 6px 10px; }
     .wrap { gap: 12px; }
     /* プレビューは上に固定せず、ふつうにスクロールさせる */
     .preview { position: static; flex-basis: 100%; max-width: 100%; }
@@ -96,6 +104,7 @@
     — <a href="https://www.youtube.com/@una_iloverodents" target="_blank">YouTube</a>
     / <a href="https://www.twitch.tv/una__vtuber_" target="_blank">Twitch</a></span>
 </header>
+<p class="privacy">🔒 データはこのブラウザの中だけに保存されます。ときどき設定をファイルに保存してください。 <a href="#backup">→ ⑦ 設定のバックアップ</a></p>
 
 <button id="toTop" onclick="scrollTo({ top: 0, behavior: 'smooth' })">▲ 画像</button>
 <div class="wrap">
@@ -107,6 +116,10 @@
       <button id="copyText">告知文をコピー</button>
     </div>
     <p class="note" id="msg"></p>
+    <div id="copyBox" hidden style="margin-top:10px">
+      <p class="note">自動でコピーできなかったので、下の文を長押し(PCはクリック)して全部選んで、コピーしてね</p>
+      <textarea class="gameText" id="copyArea" readonly></textarea>
+    </div>
     <div style="display:none;margin-top:10px">
       <p class="note">保存できなかったときは、この画像を長押しして保存してね</p>
       <img id="pressSave" alt="保存用の画像" style="width:100%;border-radius:8px">
@@ -115,19 +128,30 @@
 
   <!-- ===== 右:操作パネル ===== -->
   <div class="panel">
-    <fieldset>
-      <legend>① ゲーム一覧</legend>
-      <div class="drop" id="drop">
-        「ゲーム一覧.txt」をここにドラッグ<br>または <input type="file" id="gameFile" accept=".txt,text/plain">
+    <!-- はじめて開いた人向けの案内(サンプルが入っているときだけ出る) -->
+    <div class="sample" id="sampleNote" hidden>
+      👀 いまはサンプルの予定が入ってるよ。①のゲーム一覧と⑥の予定を、自分用に書きかえてね。
+      <div class="btns">
+        <button id="sampleClear">予定を白紙にする</button>
+        <button id="sampleOk">このまま書きかえる</button>
       </div>
-      <p class="note">txtを読み込むか、下の欄に直接書くか、どっちでもOK。1行に1タイトルで、「タイトル = #ff9f43」と書くと色も決められる。txtを書き換えたら、もう一度読み込んでね。</p>
-      <details id="gameTextBox" style="margin-top:8px">
-        <summary style="cursor:pointer;font-size:13px;color:#5cc8ff">txtを使わずに、ここに直接書く</summary>
-        <textarea class="gameText" id="gameText" placeholder="1行に1タイトル&#10;例:&#10;雑談&#10;マイクラ = #4ade80"></textarea>
-        <div class="btns" style="margin-top:6px"><button id="gameTextApply">この内容で読み込む</button></div>
-      </details>
-      <!-- ゲームごとの色。txtで決めた色がここに入る。ここで変えてもOK -->
+    </div>
+
+    <fieldset id="gameBox">
+      <legend>① ゲーム一覧</legend>
+      <label for="gameText">1行に1タイトル書いて、「反映する」を押してね</label>
+      <textarea class="gameText" id="gameText" placeholder="例:&#10;雑談&#10;マイクラ = #4ade80"></textarea>
+      <div class="btns" style="margin-top:6px"><button id="gameTextApply">反映する</button></div>
+      <p class="note">「タイトル = #ff9f43」と書くと色も決められる。下の丸を押して色を変えてもOK。</p>
+      <!-- ゲームごとの色。ここで変えると上の欄にも入る -->
       <div class="colors" id="colors"></div>
+      <details id="txtBox" style="margin-top:10px">
+        <summary style="cursor:pointer;font-size:13px;color:#5cc8ff">「ゲーム一覧.txt」から読み込む</summary>
+        <div class="drop" id="drop" style="margin-top:8px">
+          「ゲーム一覧.txt」をここにドラッグ<br>または <input type="file" id="gameFile" accept=".txt,text/plain">
+        </div>
+        <p class="note">txtで管理したい人向け。txtを書き換えたら、もう一度読み込んでね。</p>
+      </details>
     </fieldset>
 
     <fieldset>
@@ -189,14 +213,14 @@
       </div>
     </fieldset>
 
-    <fieldset>
+    <fieldset id="backup">
       <legend>⑦ 設定のバックアップ</legend>
       <div class="btns">
         <button id="exportJson">設定をファイルに保存</button>
         <button id="importBtn">設定ファイルを読み込む</button>
         <input type="file" id="importJson" accept=".json,application/json" hidden>
       </div>
-      <p class="note">入力した内容はブラウザが覚えているけど、ツールのフォルダを動かしたり、別のブラウザで開いたりすると消えちゃう。ときどき保存しておくと安心。</p>
+      <p class="note">入力した内容は、このブラウザの中だけに保存されていて、どこにも送られないよ。そのかわり、ブラウザの履歴やデータを消したり、別のブラウザ・スマホで開いたり、ツールのファイルを動かしたりすると消えちゃう。ときどき保存しておくと安心。保存したファイルを読み込めば、別のブラウザでも続きから使えるよ。</p>
     </fieldset>
   </div>
 </div>
@@ -261,6 +285,30 @@ function defaultState() {
     days: DAY_NAMES.map((_, i) => ({ on: true, time: DEFAULT_TIME[i], picks: [], memo: "" })),
   };
 }
+// はじめて開いた人向けのサンプル(すぐに完成イメージが見えるように)
+function sampleState() {
+  const s = defaultState();
+  s.games = ["Minecraft", "APEX LEGENDS", "ポケモン", "スプラトゥーン3", "雑談", "歌枠"];
+  s.colors = { "Minecraft": "#4ade80", "APEX LEGENDS": "#fb7185", "雑談": "#5cc8ff" };
+  Object.assign(s.profile, { name: "なまえ", tagline: "ゲーム実況系VTuber", motto: "みんなたのしく、マイペースに" });
+  const plan = [
+    ["Minecraft"],                    "建築のつづき",
+    ["APEX LEGENDS"],                 "ランク",
+    null,                             "",
+    ["雑談"],                          "マシュマロ読み",
+    ["スプラトゥーン3", "APEX LEGENDS"], "参加型",
+    ["ポケモン"],                      "",
+    ["歌枠"],                          "1時間くらい",
+  ];
+  s.days.forEach((day, i) => {
+    const picks = plan[i * 2];
+    day.on = !!picks;
+    day.picks = picks || [];
+    day.memo = plan[i * 2 + 1];
+  });
+  s.sample = true;   // サンプルのままのあいだだけ、案内を出す
+  return s;
+}
 // 古い設定や足りない項目があっても動くように、初期値の上に重ねる
 function mergeState(saved) {
   const s = Object.assign(defaultState(), saved || {});
@@ -271,7 +319,8 @@ function mergeState(saved) {
   if (!FORMATS[s.format]) s.format = "wide";
   return s;
 }
-let state = mergeState(load());
+// 保存されたデータがなければ(はじめて開いたとき)サンプルから始める
+let state = mergeState(load() || sampleState());
 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { return null; }
@@ -324,7 +373,7 @@ function readGameText(text) {
   state.games = list;
   // 一覧から消えたタイトルはチェックからもはずす
   state.days.forEach(day => { day.picks = day.picks.filter(g => state.games.includes(g)); });
-  save(); buildColors(); buildDays(); draw();
+  save(); buildColors(); buildDays(); fillGameText(); draw();
   flash(state.games.length + "タイトル読み込んだよ");
 }
 function readFile(file) {
@@ -333,19 +382,21 @@ function readFile(file) {
   reader.readAsText(file, "utf-8");
 }
 document.getElementById("gameFile").onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); };
-// 直接書く欄:開いたときは、いまのゲーム一覧(色つき)を入れておく
+// 直接書く欄:いまのゲーム一覧(色を決めたものは色つき)を入れておく
 const gameText = document.getElementById("gameText");
 function fillGameText() {
   gameText.value = state.games.map(g => state.colors[g] ? g + " = " + state.colors[g] : g).join("\n");
 }
-document.getElementById("gameTextBox").ontoggle = e => { if (e.target.open) fillGameText(); };
+// ダウンロード版(ファイルを直接開いたとき)は、txtの読み込み欄を最初から開いておく
+if (location.protocol === "file:") document.getElementById("txtBox").open = true;
 document.getElementById("gameTextApply").onclick = () => {
   if (!gameText.value.trim()) { flash("1行に1タイトル書いてね"); return; }
   readGameText(gameText.value);
 };
-const drop = document.getElementById("drop");
+// txtは「① ゲーム一覧」の枠のどこにドラッグしてもOK
+const drop = document.getElementById("gameBox");
 drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
-drop.ondragleave = () => drop.classList.remove("over");
+drop.ondragleave = e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove("over"); };
 drop.ondrop = e => {
   e.preventDefault(); drop.classList.remove("over");
   if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
@@ -360,7 +411,7 @@ function buildColors() {
     const cp = document.createElement("input");
     cp.type = "color";
     cp.value = colorOf(g);
-    cp.oninput = () => { state.colors[g] = cp.value; save(); buildDays(); draw(); };
+    cp.oninput = () => { state.colors[g] = cp.value; save(); buildDays(); fillGameText(); draw(); };
     lb.append(cp, g);
     box.append(lb);
   });
@@ -579,6 +630,18 @@ document.getElementById("clearAll").onclick = () => {
   state.days.forEach(day => { day.picks = []; day.memo = ""; });
   save(); buildDays(); draw();
 };
+
+// ===== サンプルの案内 =====
+function syncSampleNote() {
+  document.getElementById("sampleNote").hidden = !state.sample;
+}
+document.getElementById("sampleClear").onclick = () => {
+  state.days.forEach(day => { day.on = true; day.picks = []; day.memo = ""; });
+  state.sample = false;
+  save(); refreshAll();
+  flash("予定を白紙にしたよ");
+};
+document.getElementById("sampleOk").onclick = () => { state.sample = false; save(); syncSampleNote(); };
 
 // ===== 設定のバックアップ =====
 document.getElementById("exportJson").onclick = () => {
@@ -855,8 +918,15 @@ document.getElementById("copyText").onclick = async () => {
   });
   const tag = state.profile.hashtag.trim();
   const text = "📅" + (state.profile.titleJp || "今週の配信予定") + " " + md(dates[0]) + "〜" + md(dates[6]) + "\n\n" + lines.join("\n") + (tag ? "\n\n" + tag : "");
-  try { await navigator.clipboard.writeText(text); flash("告知文をコピーしたよ"); }
-  catch (e) { prompt("コピーできなかったので、ここから手でコピーしてね", text); }
+  const box = document.getElementById("copyBox");
+  const area = document.getElementById("copyArea");
+  try { await navigator.clipboard.writeText(text); box.hidden = true; flash("告知文をコピーしたよ"); }
+  catch (e) {
+    // コピーできないブラウザでは、文を下に出して手でコピーしてもらう(ポップアップは出さない)
+    area.value = text;
+    box.hidden = false;
+    area.focus(); area.select();
+  }
 };
 
 // ===== 起動 =====
@@ -866,6 +936,7 @@ function refreshAll() {
   syncCharaSliders();
   syncBgOpts();
   buildThemes(); buildFormats(); buildProfile(); buildColors(); buildDays();
+  fillGameText(); syncSampleNote();
   draw();
 }
 document.getElementById("toolName").textContent = TOOL_NAME;

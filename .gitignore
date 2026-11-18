@@ -1,1 +1,13 @@
+# Windows/Macが勝手に作るファイル
+Thumbs.db
+desktop.ini
+.DS_Store
 
+# BOOTH配布用のzipと、売り物のテーマ(公開リポジトリには絶対に入れない)
+*.zip
+paid-themes/
+
+# 秘密のファイル
+.env
+*.key
+*.pem
