@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ずぼら週間スケジュール</title>
+<!-- フォント(ネットにつながってないときはPCの標準フォントになる) -->
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  /* ===== 画面の見た目(CSS) ===== */
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #1e1f24;
+    color: #eee;
+    font-family: "Yu Gothic UI", "Meiryo", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+  header .by { font-size: 13px; color: #999; }
+  header a { color: #5cc8ff; }
+  .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .preview { flex: 1 1 640px; max-width: 960px; position: sticky; top: 16px; }
+  /* 縦長のときに画面からはみ出さないよう、高さにも上限をつける */
+  canvas { display: block; max-width: 100%; max-height: 80vh; width: auto; height: auto; border-radius: 8px; background: #000; margin: 0 auto; }
+  .panel { flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; }
+  fieldset { border: 1px solid #444; border-radius: 8px; padding: 10px 12px; margin: 0; }
+  legend { padding: 0 6px; font-weight: bold; }
+  label { font-size: 13px; color: #bbb; }
+  input[type=text], input[type=date], input[type=time] { box-sizing: border-box; padding: 5px 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font-size: 14px; }
+  input[type=range] { width: 100%; }
+  .note { font-size: 12px; color: #999; margin: 6px 0 0; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { padding: 7px 12px; border: 1px solid #555; border-radius: 6px; background: #2f3138; color: #eee; cursor: pointer; font-size: 13px; }
+  button:hover { filter: brightness(1.2); }
+  button.active { border-color: #5cc8ff; color: #5cc8ff; font-weight: bold; }
+  .big { padding: 12px; font-size: 16px; font-weight: bold; border: none; background: #f2c14e; color: #222; flex: 1; }
+  .drop { border: 2px dashed #555; border-radius: 8px; padding: 10px; text-align: center; font-size: 13px; color: #aaa; }
+  .drop.over { border-color: #5cc8ff; color: #5cc8ff; }
+
+  /* プロフィールの入力欄 */
+  .grid { display: grid; grid-template-columns: 7em 1fr; gap: 6px 8px; align-items: center; }
+  .grid input { width: 100%; }
+
+  /* テーマの見本 */
+  .theme { display: inline-flex; align-items: center; gap: 6px; }
+  .theme i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 1px solid #0006; }
+
+  /* ゲームの色の一覧 */
+  .colors { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+  .colors label { display: inline-flex; align-items: center; gap: 5px; color: #ddd; }
+  .colors input { width: 28px; height: 22px; padding: 0; border: none; background: none; cursor: pointer; }
+
+  /* 曜日ごとの行 */
+  .day { border: 1px solid #3a3c44; border-radius: 8px; padding: 8px 10px; margin-top: 8px; background: #25272d; }
+  .day.off { opacity: .55; }
+  .day-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .day-name { font-weight: bold; width: 74px; }
+  .day-name.sat { color: #7cc4ff; }
+  .day-name.sun { color: #ff8a8a; }
+  .games { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  /* チェックボックスをボタン風にする。チェックするとゲームの色になる */
+  .games label { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border: 1px solid #555; border-radius: 999px; cursor: pointer; color: #ddd; user-select: none; }
+  .games input { display: none; }
+  .games label.on { color: #10141a; font-weight: bold; }
+  .memo { width: 100%; margin-top: 8px; }
+  .day.off .games, .day.off .memo, .day.off input[type=time] { display: none; }
+  .gameText { width: 100%; box-sizing: border-box; min-height: 110px; margin-top: 8px; padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font: 14px "Yu Gothic UI", "Meiryo", sans-serif; resize: vertical; }
+
+  /* ===== スマホ(画面がせまいとき) ===== */
+  @media (max-width: 760px) {
+    body { padding: 10px; }
+    header h1 { font-size: 19px; }
+    .wrap { gap: 12px; }
+    /* プレビューは上に固定せず、ふつうにスクロールさせる */
+    .preview { position: static; flex-basis: 100%; max-width: 100%; }
+    canvas { max-height: none; width: 100%; }
+    .panel { flex-basis: 100%; max-width: 100%; }
+    .grid { grid-template-columns: 6em 1fr; }
+    /* 文字の大きさが16px未満だと、iPhoneが入力のたびに画面を拡大してしまう */
+    input[type=text], input[type=date], input[type=time], .gameText { font-size: 16px; }
+    button { padding: 9px 12px; font-size: 14px; }
+    .big { padding: 14px; }
+    .games label { padding: 6px 11px; }
+    .day-name { width: auto; }
+    /* 下のほうで入力しているときに、画像まで一気に戻るボタン */
+    #toTop { display: block; position: fixed; right: 14px; bottom: 14px; z-index: 10; padding: 12px 16px; border: none; border-radius: 999px; background: #5cc8ff; color: #10141a; font-weight: bold; box-shadow: 0 4px 14px #0008; }
+  }
+  #toTop { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📅 <span id="toolName"></span></h1>
+  <span class="by">made by うな(VTuber)
+    — <a href="https://www.youtube.com/@una_iloverodents" target="_blank">YouTube</a>
+    / <a href="https://www.twitch.tv/una__vtuber_" target="_blank">Twitch</a></span>
+</header>
+
+<button id="toTop" onclick="scrollTo({ top: 0, behavior: 'smooth' })">▲ 画像</button>
+<div class="wrap">
+  <!-- ===== 左:画像のプレビュー ===== -->
+  <div class="preview">
+    <canvas id="card" width="1920" height="1080"></canvas>
+    <div class="btns" style="margin-top:10px">
+      <button class="big" id="save">画像を保存(PNG)</button>
+      <button id="copyText">告知文をコピー</button>
+    </div>
+    <p class="note" id="msg"></p>
+    <div style="display:none;margin-top:10px">
+      <p class="note">保存できなかったときは、この画像を長押しして保存してね</p>
+      <img id="pressSave" alt="保存用の画像" style="width:100%;border-radius:8px">
+    </div>
+  </div>
+
+  <!-- ===== 右:操作パネル ===== -->
+  <div class="panel">
+    <fieldset>
+      <legend>① ゲーム一覧</legend>
+      <div class="drop" id="drop">
+        「ゲーム一覧.txt」をここにドラッグ<br>または <input type="file" id="gameFile" accept=".txt,text/plain">
+      </div>
+      <p class="note">txtを読み込むか、下の欄に直接書くか、どっちでもOK。1行に1タイトルで、「タイトル = #ff9f43」と書くと色も決められる。txtを書き換えたら、もう一度読み込んでね。</p>
+      <details id="gameTextBox" style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:13px;color:#5cc8ff">txtを使わずに、ここに直接書く</summary>
+        <textarea class="gameText" id="gameText" placeholder="1行に1タイトル&#10;例:&#10;雑談&#10;マイクラ = #4ade80"></textarea>
+        <div class="btns" style="margin-top:6px"><button id="gameTextApply">この内容で読み込む</button></div>
+      </details>
+      <!-- ゲームごとの色。txtで決めた色がここに入る。ここで変えてもOK -->
+      <div class="colors" id="colors"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>② プロフィール</legend>
+      <!-- 空にした項目は画像に出ない -->
+      <div class="grid" id="profile"></div>
+      <p class="note">空にした項目は画像に出ないよ。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>③ デザイン</legend>
+      <label>テーマ</label>
+      <div class="btns" id="themes" style="margin:4px 0 10px"></div>
+      <label>背景画像(なくてもOK)</label>
+      <div class="btns" style="margin:4px 0 6px">
+        <input type="file" id="bgFile" accept="image/*">
+        <button id="bgClear">はずす</button>
+      </div>
+      <div id="bgOpts">
+        <label style="display:block">画像のうすさ(テーマの色をどれくらい重ねるか)</label>
+        <input type="range" id="bgDim" min="0" max="90">
+        <label style="display:block">文字の下の枠の濃さ</label>
+        <input type="range" id="bgPanel" min="30" max="100">
+      </div>
+      <p class="note" style="margin-bottom:10px">好きな画像を背景にできるよ。文字が読みにくいときは「うすさ」か「枠の濃さ」を上げてね。</p>
+      <label>サイズ</label>
+      <div class="btns" id="formats" style="margin-top:4px"></div>
+      <p class="note">横長はXの通常ポスト向け。縦長(4:5)はXのタイムラインで大きく出る。ストーリー(9:16)は上下が隠れやすいので、余白を多めにとってある。</p>
+      <label style="display:block;margin-top:8px"><input type="checkbox" id="credit"> 画像の左下に小さくツール名を入れる</label>
+      <p class="note">入れてくれると作者がとてもよろこびます。はずしてもOK!</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>④ 立ち絵(なくてもOK)</legend>
+      <input type="file" id="charaFile" accept="image/*">
+      <button id="charaClear">はずす</button>
+      <label style="display:block;margin-top:8px">大きさ</label>
+      <input type="range" id="charaSize" min="25" max="130">
+      <label style="display:block">横の位置</label>
+      <input type="range" id="charaX" min="-200" max="200">
+      <p class="note">背景が透明なPNGを選んでね。画像の右下に出るよ。大きさと位置はサイズごとに覚えておく。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>⑤ 週を選ぶ</legend>
+      <div class="btns" style="align-items:center">
+        <button id="prevWeek">◀ 前の週</button>
+        <input type="date" id="weekStart">
+        <button id="nextWeek">次の週 ▶</button>
+      </div>
+      <p class="note">月曜はじまり。週を変えてもチェックはそのまま残るから、先週の予定をベースに直せるよ。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>⑥ 曜日ごとにチェック</legend>
+      <div id="days"></div>
+      <div class="btns" style="margin-top:10px">
+        <button id="clearAll">チェックを全部はずす</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>⑦ 設定のバックアップ</legend>
+      <div class="btns">
+        <button id="exportJson">設定をファイルに保存</button>
+        <button id="importBtn">設定ファイルを読み込む</button>
+        <input type="file" id="importJson" accept=".json,application/json" hidden>
+      </div>
+      <p class="note">入力した内容はブラウザが覚えているけど、ツールのフォルダを動かしたり、別のブラウザで開いたりすると消えちゃう。ときどき保存しておくと安心。</p>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+// ===== 設定 =====
+const TOOL_NAME = "ずぼら週間スケジュール";
+const DAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"];
+const DAY_EN    = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const DEFAULT_TIME = ["21:00", "21:00", "21:00", "21:00", "21:00", "20:00", "20:00"];
+// txtで色を決めていないゲームに、上から順番につける色
+const AUTO_COLORS = ["#ff9f43", "#a78bfa", "#4ade80", "#5cc8ff", "#f472b6", "#facc15", "#fb7185", "#2dd4bf"];
+
+// 画像のサイズ。type: side=左にタイトル帯 / top=上にタイトル帯
+// head: 上の帯の高さ、pad: 帯の中の上の余白、bottom: 下の余白
+const FORMATS = {
+  wide:   { label: "横長 16:9",        w: 1920, h: 1080, type: "side" },
+  square: { label: "正方形 1:1",       w: 1080, h: 1080, type: "top", head: 230, pad: 0,   bottom: 50 },
+  tall:   { label: "縦長 4:5",         w: 1080, h: 1350, type: "top", head: 260, pad: 0,   bottom: 50 },
+  story:  { label: "ストーリー 9:16",  w: 1080, h: 1920, type: "top", head: 430, pad: 170, bottom: 230 },
+};
+
+// 色のテーマ。light: 明るい背景(ゲーム名の色を少し濃くして読みやすくする)
+// holes: アクセントの三角に穴をあけてチーズっぽくする
+const THEMES = {
+  midnight: { label: "ミッドナイト", bg: "#12141a", panel: "#1b1e26", line: "#2c303b", accent: "#5cc8ff", accent2: "#ffc94a", text: "#f2f4f8", dim: "#6b7180", sat: "#7cc4ff", sun: "#ff8a8a", grid: "rgba(92,200,255,0.05)", holes: true },
+  forest:   { label: "フォレスト",   bg: "#0f1a14", panel: "#16251c", line: "#24382b", accent: "#6ee7a8", accent2: "#f5d76e", text: "#eef6f0", dim: "#6d8577", sat: "#7cc4ff", sun: "#ff8a8a", grid: "rgba(110,231,168,0.05)" },
+  sunset:   { label: "サンセット",   bg: "#1c1220", panel: "#281a2c", line: "#3a2840", accent: "#ff7a59", accent2: "#ffd166", text: "#fff1ea", dim: "#8a7380", sat: "#8ab4ff", sun: "#ff6b81", grid: "rgba(255,122,89,0.05)" },
+  sakura:   { label: "サクラ",       bg: "#fff5f8", panel: "#ffffff", line: "#f3d3de", accent: "#f06292", accent2: "#9575cd", text: "#3a2a33", dim: "#b8a3ad", sat: "#3f7fd0", sun: "#e0465f", grid: "rgba(240,98,146,0.08)", light: true },
+  snow:     { label: "スノー",       bg: "#f3f6fa", panel: "#ffffff", line: "#d9e1ea", accent: "#2f6fde", accent2: "#f59e0b", text: "#1f2937", dim: "#9aa5b1", sat: "#2f6fde", sun: "#e11d48", grid: "rgba(47,111,222,0.06)", light: true },
+};
+
+// プロフィールの項目(画像に出す文字)
+const PROFILE_FIELDS = [
+  ["name",      "名前",         "例:うな"],
+  ["tagline",   "肩書き",       "例:ゲーム実況系VTuber"],
+  ["titleEn",   "見出し(英)",   "例:WEEKLY SCHEDULE"],
+  ["titleJp",   "見出し(日)",   "例:今週の配信予定"],
+  ["motto",     "ひとこと",     "例:みんなたのしく、マイペースに"],
+  ["platforms", "配信場所",     "例:YouTube / Twitch"],
+  ["hashtag",   "ハッシュタグ", "例:#〇〇配信(告知文の最後につく)"],
+];
+
+const STORE_KEY = "zubora-schedule";
+const CHARA_KEY = "zubora-schedule-chara";   // 立ち絵は大きいので別にしまう
+const BG_KEY = "zubora-schedule-bg";         // 背景画像も別にしまう
+
+// ===== 保存しておくデータ =====
+function defaultState() {
+  return {
+    games: ["ゲームA", "ゲームB", "雑談"],
+    colors: {},
+    profile: { name: "なまえ", tagline: "", titleEn: "WEEKLY SCHEDULE", titleJp: "今週の配信予定", motto: "", platforms: "YouTube / Twitch", hashtag: "" },
+    theme: "midnight",
+    format: "wide",
+    credit: true,
+    bgDim: 50,     // 背景画像の上に重ねるテーマの色の濃さ(%)
+    bgPanel: 85,   // 背景画像があるときの、文字の下の枠の濃さ(%)
+    // 立ち絵の大きさ(画像の高さに対する%)と横の位置。サイズごとに別々に覚える
+    charaPos: { wide: { size: 85, x: 0 }, square: { size: 55, x: 0 }, tall: { size: 50, x: 0 }, story: { size: 40, x: 0 } },
+    weekStart: toDateStr(nextMonday(new Date())),
+    days: DAY_NAMES.map((_, i) => ({ on: true, time: DEFAULT_TIME[i], picks: [], memo: "" })),
+  };
+}
+// 古い設定や足りない項目があっても動くように、初期値の上に重ねる
+function mergeState(saved) {
+  const s = Object.assign(defaultState(), saved || {});
+  const d = defaultState();
+  s.profile = Object.assign(d.profile, s.profile);
+  s.charaPos = Object.assign(d.charaPos, s.charaPos);
+  if (!THEMES[s.theme]) s.theme = "midnight";
+  if (!FORMATS[s.format]) s.format = "wide";
+  return s;
+}
+let state = mergeState(load());
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { return null; }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// ゲームの色を返す(決まっていなければ一覧の順番で自動の色)
+function colorOf(g) {
+  return state.colors[g] || AUTO_COLORS[Math.max(0, state.games.indexOf(g)) % AUTO_COLORS.length];
+}
+// 色を暗くする(明るいテーマでゲーム名を読みやすくするため)
+function darken(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = v => Math.round(v * (1 - k)).toString(16).padStart(2, "0");
+  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+}
+
+// ===== 日付まわり =====
+function nextMonday(d) {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const add = (8 - r.getDay()) % 7 || 7;   // 今日が月曜でも「次の」月曜にする
+  r.setDate(r.getDate() + add);
+  return r;
+}
+function toDateStr(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function weekDates() {
+  const [y, m, d] = state.weekStart.split("-").map(Number);
+  return DAY_NAMES.map((_, i) => new Date(y, m - 1, d + i));
+}
+const md = d => (d.getMonth() + 1) + "/" + d.getDate();
+
+// ===== テキストファイルの読み込み =====
+function readGameText(text) {
+  const list = [];
+  text.replace(/^﻿/, "")                       // メモ帳が付けるBOMを消す
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(s => s && !s.startsWith("#"))
+    .forEach(line => {
+      // 「タイトル = #色コード」の形なら色も読む(全角の=もOK)
+      const m = line.match(/^(.+?)\s*[=＝]\s*(#[0-9a-fA-F]{6})$/);
+      const name = m ? m[1] : line;
+      if (m) state.colors[name] = m[2].toLowerCase();
+      if (!list.includes(name)) list.push(name);   // 同じタイトルが2回あっても1つにまとめる
+    });
+  state.games = list;
+  // 一覧から消えたタイトルはチェックからもはずす
+  state.days.forEach(day => { day.picks = day.picks.filter(g => state.games.includes(g)); });
+  save(); buildColors(); buildDays(); draw();
+  flash(state.games.length + "タイトル読み込んだよ");
+}
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => readGameText(reader.result);
+  reader.readAsText(file, "utf-8");
+}
+document.getElementById("gameFile").onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); };
+// 直接書く欄:開いたときは、いまのゲーム一覧(色つき)を入れておく
+const gameText = document.getElementById("gameText");
+function fillGameText() {
+  gameText.value = state.games.map(g => state.colors[g] ? g + " = " + state.colors[g] : g).join("\n");
+}
+document.getElementById("gameTextBox").ontoggle = e => { if (e.target.open) fillGameText(); };
+document.getElementById("gameTextApply").onclick = () => {
+  if (!gameText.value.trim()) { flash("1行に1タイトル書いてね"); return; }
+  readGameText(gameText.value);
+};
+const drop = document.getElementById("drop");
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("over");
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+};
+
+// ===== ゲームの色の一覧 =====
+function buildColors() {
+  const box = document.getElementById("colors");
+  box.innerHTML = "";
+  state.games.forEach(g => {
+    const lb = document.createElement("label");
+    const cp = document.createElement("input");
+    cp.type = "color";
+    cp.value = colorOf(g);
+    cp.oninput = () => { state.colors[g] = cp.value; save(); buildDays(); draw(); };
+    lb.append(cp, g);
+    box.append(lb);
+  });
+}
+
+// ===== プロフィール =====
+function buildProfile() {
+  const box = document.getElementById("profile");
+  box.innerHTML = "";
+  PROFILE_FIELDS.forEach(([key, label, ph]) => {
+    const lb = document.createElement("label");
+    lb.textContent = label;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = ph;
+    input.value = state.profile[key];
+    input.oninput = () => { state.profile[key] = input.value; save(); draw(); };
+    box.append(lb, input);
+  });
+}
+
+// ===== 曜日ごとの入力欄を作る =====
+function buildDays() {
+  const box = document.getElementById("days");
+  box.innerHTML = "";
+  const dates = weekDates();
+  state.days.forEach((day, i) => {
+    const row = document.createElement("div");
+    row.className = "day" + (day.on ? "" : " off");
+    const cls = i === 5 ? "sat" : i === 6 ? "sun" : "";
+    row.innerHTML = `
+      <div class="day-head">
+        <span class="day-name ${cls}">${md(dates[i])}(${DAY_NAMES[i]})</span>
+        <label><input type="checkbox" class="on" ${day.on ? "checked" : ""}> 配信する</label>
+        <input type="time" class="time" value="${day.time}">
+      </div>
+      <div class="games"></div>
+      <input type="text" class="memo" placeholder="ひとこと(例:参加型、新シーズン初日)">`;
+    row.querySelector(".memo").value = day.memo;
+
+    // ゲームのチェックボックス
+    const games = row.querySelector(".games");
+    state.games.forEach(g => {
+      const lb = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = day.picks.includes(g);
+      const paint = () => {
+        lb.className = cb.checked ? "on" : "";
+        lb.style.background = cb.checked ? colorOf(g) : "";
+        lb.style.borderColor = colorOf(g);
+      };
+      paint();
+      lb.append(cb, g);
+      cb.onchange = () => {
+        // チェックした順番がそのまま表示順になる
+        day.picks = cb.checked ? [...day.picks, g] : day.picks.filter(x => x !== g);
+        paint(); save(); draw();
+      };
+      games.append(lb);
+    });
+
+    row.querySelector(".on").onchange = e => {
+      day.on = e.target.checked;
+      row.classList.toggle("off", !day.on);
+      save(); draw();
+    };
+    row.querySelector(".time").oninput = e => { day.time = e.target.value; save(); draw(); };
+    row.querySelector(".memo").oninput = e => { day.memo = e.target.value; save(); draw(); };
+    box.append(row);
+  });
+}
+
+// ===== テーマ・サイズの切り替え =====
+function buildThemes() {
+  const box = document.getElementById("themes");
+  box.innerHTML = "";
+  Object.entries(THEMES).forEach(([key, t]) => {
+    const b = document.createElement("button");
+    b.className = "theme" + (state.theme === key ? " active" : "");
+    b.innerHTML = `<i style="background:${t.bg}"></i><i style="background:${t.accent}"></i>${t.label}`;
+    b.onclick = () => { state.theme = key; save(); buildThemes(); draw(); };
+    box.append(b);
+  });
+}
+function buildFormats() {
+  const box = document.getElementById("formats");
+  box.innerHTML = "";
+  Object.entries(FORMATS).forEach(([key, f]) => {
+    const b = document.createElement("button");
+    b.textContent = f.label;
+    b.className = state.format === key ? "active" : "";
+    b.onclick = () => { state.format = key; save(); buildFormats(); syncCharaSliders(); draw(); };
+    box.append(b);
+  });
+}
+const creditInput = document.getElementById("credit");
+creditInput.onchange = () => { state.credit = creditInput.checked; save(); draw(); };
+
+// ===== 立ち絵 =====
+let chara = null;   // 読み込んだ立ち絵の画像
+let charaUrl = "";  // 設定ファイルに入れるため、画像のデータも持っておく
+function setChara(src) {
+  const img = new Image();
+  img.onload = () => { chara = img; charaUrl = src; draw(); };
+  img.src = src;
+}
+function storeChara(url) {
+  try { localStorage.setItem(CHARA_KEY, url); }
+  catch (err) { flash("立ち絵が大きすぎて覚えておけなかった。設定ファイルに保存しておくと安心だよ"); }
+  setChara(url);
+}
+document.getElementById("charaFile").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // 覚えておけるサイズにするため、高さ1400pxまで縮めてからしまう
+      const k = Math.min(1, 1400 / img.height);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      storeChara(c.toDataURL("image/png"));
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+};
+document.getElementById("charaClear").onclick = () => {
+  chara = null; charaUrl = "";
+  try { localStorage.removeItem(CHARA_KEY); } catch (e) {}
+  document.getElementById("charaFile").value = "";
+  draw();
+};
+const sizeInput = document.getElementById("charaSize");
+const xInput = document.getElementById("charaX");
+sizeInput.oninput = () => { state.charaPos[state.format].size = +sizeInput.value; save(); draw(); };
+xInput.oninput = () => { state.charaPos[state.format].x = +xInput.value; save(); draw(); };
+// スライダーを、いま選んでいるサイズの値に合わせる
+function syncCharaSliders() {
+  sizeInput.value = state.charaPos[state.format].size;
+  xInput.value = state.charaPos[state.format].x;
+}
+
+// ===== 背景画像 =====
+let bg = null;     // 読み込んだ背景画像
+let bgUrl = "";    // 設定ファイルに入れるため、画像のデータも持っておく
+function setBg(src) {
+  const img = new Image();
+  img.onload = () => { bg = img; bgUrl = src; syncBgOpts(); draw(); };
+  img.src = src;
+}
+function storeBg(url) {
+  try { localStorage.setItem(BG_KEY, url); }
+  catch (err) { flash("背景画像が大きすぎて覚えておけなかった。設定ファイルに保存しておくと安心だよ"); }
+  setBg(url);
+}
+document.getElementById("bgFile").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // 覚えておけるサイズにするため、長いほうの辺を1920pxまで縮めて、JPEGにしてしまう
+      const k = Math.min(1, 1920 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      storeBg(c.toDataURL("image/jpeg", 0.88));
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+};
+document.getElementById("bgClear").onclick = () => {
+  bg = null; bgUrl = "";
+  try { localStorage.removeItem(BG_KEY); } catch (e) {}
+  document.getElementById("bgFile").value = "";
+  syncBgOpts(); draw();
+};
+const bgDimInput = document.getElementById("bgDim");
+const bgPanelInput = document.getElementById("bgPanel");
+bgDimInput.oninput = () => { state.bgDim = +bgDimInput.value; save(); draw(); };
+bgPanelInput.oninput = () => { state.bgPanel = +bgPanelInput.value; save(); draw(); };
+// スライダーは背景画像があるときだけ出す
+function syncBgOpts() {
+  bgDimInput.value = state.bgDim;
+  bgPanelInput.value = state.bgPanel;
+  document.getElementById("bgOpts").style.display = bg ? "" : "none";
+}
+// 文字の下の枠の濃さ(背景画像がないときはいつも100%)
+const panelAlpha = () => bg ? state.bgPanel / 100 : 1;
+
+// ===== 週の切り替え =====
+const weekInput = document.getElementById("weekStart");
+function setWeek(dateStr) {
+  // どの曜日を選んでも、その週の月曜日にそろえる
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+  state.weekStart = toDateStr(dt);
+  weekInput.value = state.weekStart;
+  save(); buildDays(); draw();
+}
+function shiftWeek(n) {
+  const [y, m, d] = state.weekStart.split("-").map(Number);
+  setWeek(toDateStr(new Date(y, m - 1, d + 7 * n)));
+}
+weekInput.onchange = () => weekInput.value && setWeek(weekInput.value);
+document.getElementById("prevWeek").onclick = () => shiftWeek(-1);
+document.getElementById("nextWeek").onclick = () => shiftWeek(1);
+document.getElementById("clearAll").onclick = () => {
+  state.days.forEach(day => { day.picks = []; day.memo = ""; });
+  save(); buildDays(); draw();
+};
+
+// ===== 設定のバックアップ =====
+document.getElementById("exportJson").onclick = () => {
+  const data = JSON.stringify({ tool: TOOL_NAME, version: 1, state, chara: charaUrl, bg: bgUrl });
+  const a = document.createElement("a");
+  a.download = "スケジュール設定.json";
+  a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+const importInput = document.getElementById("importJson");
+document.getElementById("importBtn").onclick = () => importInput.click();
+importInput.onchange = () => {
+  const file = importInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      state = mergeState(data.state);
+      save();
+      if (data.chara) storeChara(data.chara);
+      if (data.bg) storeBg(data.bg);
+      refreshAll();
+      flash("設定を読み込んだよ");
+    } catch (e) {
+      flash("このファイルは読み込めなかった。保存した設定ファイル(.json)を選んでね");
+    }
+    importInput.value = "";
+  };
+  reader.readAsText(file, "utf-8");
+};
+
+// ===== 画像を描く(canvas) =====
+const cv = document.getElementById("card");
+const ctx = cv.getContext("2d");
+let C = THEMES.midnight;   // いま使っているテーマの色(draw のたびに入れ替える)
+const JP = '"M PLUS Rounded 1c", "Yu Gothic UI", sans-serif';
+const EN = 'Orbitron, "Yu Gothic UI", sans-serif';
+
+// 明るいテーマのときは、ゲームの色を少し濃くして読みやすくする
+const titleColor = g => C.light ? darken(colorOf(g), 0.3) : colorOf(g);
+
+// 横幅に収まるまで文字を小さくする
+function fitText(text, x, y, maxW, size, font, color, weight = 800) {
+  let s = size;
+  do { ctx.font = `${weight} ${s}px ${font}`; s -= 2; } while (ctx.measureText(text).width > maxW && s > 14);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+// ゲーム名をそれぞれの色で「 / 」区切りに並べる(はみ出すなら全体を小さくする)
+function drawTitles(picks, x, y, maxW, size) {
+  const sep = " / ";
+  let s = size, total;
+  do {
+    ctx.font = `800 ${s}px ${JP}`;
+    total = picks.reduce((w, g, i) => w + ctx.measureText(g).width + (i ? ctx.measureText(sep).width : 0), 0);
+    s -= 2;
+  } while (total > maxW && s > 18);
+  picks.forEach((g, i) => {
+    if (i) { ctx.fillStyle = C.dim; ctx.fillText(sep, x, y); x += ctx.measureText(sep).width; }
+    ctx.fillStyle = titleColor(g); ctx.fillText(g, x, y); x += ctx.measureText(g).width;
+  });
+}
+
+// 背景+うっすら方眼
+function drawBackground(W, H) {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  if (bg) {
+    // 背景画像:画面いっぱいに広げて(はみ出たぶんは切る)、上からテーマの色をうすく重ねる
+    const k = Math.max(W / bg.width, H / bg.height);
+    const w = bg.width * k, h = bg.height * k;
+    ctx.drawImage(bg, (W - w) / 2, (H - h) / 2, w, h);
+    ctx.globalAlpha = state.bgDim / 100;
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    return;   // 画像があるときは方眼は描かない
+  }
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+}
+
+// アクセントの三角(x, y が左上。k で大きさ)。テーマによっては穴をあけてチーズにする
+function drawAccent(x, y, k) {
+  ctx.fillStyle = C.accent2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 80 * k, y); ctx.lineTo(x, y + 50 * k); ctx.closePath(); ctx.fill();
+  if (C.holes) {
+    ctx.fillStyle = C.bg;
+    ctx.beginPath(); ctx.arc(x + 22 * k, y + 14 * k, 7 * k, 0, Math.PI * 2); ctx.arc(x + 40 * k, y + 8 * k, 4 * k, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// 横長用:左側のタイトル帯
+function drawSideHeader(H, dates) {
+  const p = state.profile;
+  ctx.globalAlpha = panelAlpha();
+  ctx.fillStyle = C.panel; ctx.fillRect(0, 0, 560, H);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = C.accent; ctx.fillRect(560, 0, 6, H);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  // 英語の見出しは、最初の空白で2行に分ける
+  const en = p.titleEn.trim();
+  const cut = en.indexOf(" ");
+  const lines = cut > 0 ? [en.slice(0, cut), en.slice(cut + 1)] : [en];
+  lines.forEach((t, i) => fitText(t, 70, 210 + i * 75, 440, 64, EN, C.accent, 900));
+  if (p.titleJp) fitText(p.titleJp, 70, 370, 440, 44, JP, C.text);
+  ctx.fillStyle = C.accent2; ctx.font = `700 48px ${EN}`;
+  ctx.fillText(md(dates[0]) + " - " + md(dates[6]), 70, 470);
+  drawAccent(70, 560, 1);
+  if (p.name) fitText(p.name, 70, 760, 440, 52, JP, C.text);
+  if (p.tagline) fitText(p.tagline, 70, 810, 440, 28, JP, C.dim);
+  if (p.motto) fitText(p.motto, 70, 970, 440, 28, JP, C.dim);
+  if (p.platforms) fitText(p.platforms, 70, 1010, 440, 24, EN, C.dim, 700);
+  if (state.credit) drawCredit(70, 1056);
+}
+
+// 正方形・縦長・ストーリー用:上のタイトル帯
+function drawTopHeader(W, f, dates) {
+  const p = state.profile;
+  const y1 = f.pad + (f.head - f.pad) * 0.42;   // 1行目の高さ
+  const y2 = f.pad + (f.head - f.pad) * 0.78;   // 2行目の高さ
+  ctx.globalAlpha = panelAlpha();
+  ctx.fillStyle = C.panel; ctx.fillRect(0, 0, W, f.head);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = C.accent; ctx.fillRect(0, f.head, W, 6);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  fitText(p.titleEn, 50, y1, W - 230, 60, EN, C.accent, 900);
+  drawAccent(W - 150, y1 - 50, 0.9);
+  // 2行目:日本語の見出し+期間(左)と名前(右)
+  let x = 50;
+  if (p.titleJp) { fitText(p.titleJp, x, y2, 420, 40, JP, C.text); x += ctx.measureText(p.titleJp).width + 30; }
+  ctx.fillStyle = C.accent2; ctx.font = `700 40px ${EN}`;
+  const range = md(dates[0]) + " - " + md(dates[6]);
+  ctx.fillText(range, x, y2);
+  x += ctx.measureText(range).width + 40;
+  if (p.name) {
+    ctx.textAlign = "right";
+    fitText(p.name, W - 50, y2, Math.max(120, W - 50 - x), 40, JP, C.text);
+    ctx.textAlign = "left";
+  }
+}
+
+// ツール名のクレジット(左下に小さく)
+function drawCredit(x, y) {
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  ctx.fillStyle = C.dim; ctx.font = `800 18px ${JP}`;
+  ctx.fillText("made with " + TOOL_NAME, x, y);
+}
+
+// 曜日のリスト(x0〜x1、y0〜y1 の範囲に7行並べる)
+function drawRows(x0, y0, x1, y1, dates, compact) {
+  const rowH = (y1 - y0) / 7;
+  const k = Math.min(rowH / 137, 1.3);   // 横長のときの行の高さを基準にした倍率
+  const h = rowH - 14 * (rowH / 137);
+  state.days.forEach((day, i) => {
+    const y = y0 + i * rowH;
+    const color = i === 5 ? C.sat : i === 6 ? C.sun : C.text;
+
+    ctx.globalAlpha = (day.on ? 1 : 0.5) * panelAlpha();
+    ctx.fillStyle = C.panel; ctx.fillRect(x0, y, x1 - x0, h);
+    ctx.globalAlpha = 1;
+    // 左の縦線は、その日の最初のゲームの色
+    if (day.on) { ctx.fillStyle = day.picks.length ? colorOf(day.picks[0]) : C.accent; ctx.fillRect(x0, y, 8, h); }
+
+    ctx.textBaseline = "middle";
+    let gx;   // ゲーム名を書きはじめる位置
+    if (compact) {
+      // 正方形・縦長:幅が狭いので、左の欄に「曜日 日付」と開始時間を上下に詰める
+      ctx.fillStyle = day.on ? color : C.dim; ctx.font = `900 ${28 * k}px ${EN}`;
+      ctx.fillText(DAY_EN[i], x0 + 30 * k, y + h / 2 - 22 * k);
+      ctx.font = `700 ${24 * k}px ${EN}`;
+      ctx.fillText(md(dates[i]), x0 + 125 * k, y + h / 2 - 22 * k);
+      ctx.fillStyle = day.on ? C.accent2 : C.dim; ctx.font = `700 ${36 * k}px ${EN}`;
+      ctx.fillText(day.on ? (day.time || "--:--") : "-", x0 + 30 * k, y + h / 2 + 22 * k);
+      ctx.fillStyle = C.line; ctx.fillRect(x0 + 230 * k, y + 20 * k, 2, h - 40 * k);
+      gx = x0 + 256 * k;
+    } else {
+      // 横長:曜日と日付 | 開始時間 | ゲーム名 の3列
+      ctx.fillStyle = day.on ? color : C.dim; ctx.font = `900 ${34 * k}px ${EN}`;
+      ctx.fillText(DAY_EN[i], x0 + 36 * k, y + h / 2 - 20 * k);
+      ctx.font = `700 ${30 * k}px ${EN}`;
+      ctx.fillText(md(dates[i]), x0 + 36 * k, y + h / 2 + 24 * k);
+      ctx.fillStyle = C.line; ctx.fillRect(x0 + 190 * k, y + 20 * k, 2, h - 40 * k);
+      if (day.on) { ctx.fillStyle = C.accent2; ctx.font = `700 ${40 * k}px ${EN}`; ctx.fillText(day.time || "--:--", x0 + 220 * k, y + h / 2); }
+      gx = x0 + (day.on ? 420 : 220) * k;
+    }
+
+    if (!day.on) {
+      ctx.fillStyle = C.dim; ctx.font = `800 ${40 * k}px ${JP}`;
+      ctx.fillText("おやすみ", gx, y + h / 2);
+      return;
+    }
+
+    // ゲーム名+ひとこと
+    const gw = x1 - gx - 24 * k;
+    const titleY = day.memo ? y + h / 2 - 18 * k : y + h / 2;
+    if (day.picks.length) drawTitles(day.picks, gx, titleY, gw, (day.memo ? 46 : 50) * k);
+    else fitText("未定", gx, titleY, gw, 46 * k, JP, C.dim);
+    if (day.memo) fitText(day.memo, gx, y + h / 2 + 30 * k, gw, 28 * k, JP, C.accent);
+  });
+  ctx.textBaseline = "alphabetic";
+}
+
+// 立ち絵を置く場所(右下にくっつける)
+function charaRect(W, H) {
+  const p = state.charaPos[state.format];
+  const h = H * p.size / 100;
+  const w = chara.width * h / chara.height;
+  return { x: W - w + p.x, y: H - h, w, h };
+}
+
+function draw() {
+  C = THEMES[state.theme];
+  const f = FORMATS[state.format];
+  if (cv.width !== f.w || cv.height !== f.h) { cv.width = f.w; cv.height = f.h; }
+  const W = f.w, H = f.h;
+  const dates = weekDates();
+  // 立ち絵があるときは、その分リストの右端を左に寄せる
+  // (画像の左右は透明なことが多いので、見えている幅の7割だけ空ける。文字が狭くなりすぎないよう上限あり)
+  const cr = chara && charaRect(W, H);
+  const reserve = cr ? Math.min(Math.max(0, (W - cr.x) * 0.7), W * (f.type === "side" ? 0.25 : 0.3)) : 0;
+
+  drawBackground(W, H);
+  if (f.type === "side") {
+    drawSideHeader(H, dates);
+    drawRows(620, 60, W - 60 - reserve, H - 60, dates, false);
+  } else {
+    drawTopHeader(W, f, dates);
+    drawRows(50, f.head + 40, W - 50 - reserve, H - f.bottom, dates, true);
+    if (state.credit) drawCredit(50, H - f.bottom + Math.min(36, f.bottom - 16));
+  }
+  if (cr) ctx.drawImage(chara, cr.x, cr.y, cr.w, cr.h);
+}
+
+// ===== 保存・コピー =====
+function flash(t) {
+  const m = document.getElementById("msg");
+  m.textContent = t;
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => m.textContent = "", 4000);
+}
+document.getElementById("save").onclick = () => {
+  const name = "schedule_" + state.weekStart + "_" + state.format + ".png";
+  cv.toBlob(async blob => {
+    // スマホでは「共有」画面を出す(そこから写真に保存やXに投稿ができる)
+    const file = new File([blob], name, { type: "image/png" });
+    const touch = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; }
+      catch (e) { if (e.name === "AbortError") return; }   // 自分で閉じたときは何もしない
+    }
+    // PC(と共有できないスマホ)は、ふつうにダウンロード
+    const a = document.createElement("a");
+    a.download = name;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    if (touch) {
+      // 念のため、長押しで保存できる「画像」も下に出しておく(canvasのままだと長押しで保存できないため)
+      const img = document.getElementById("pressSave");
+      img.src = cv.toDataURL("image/png");
+      img.parentElement.style.display = "";
+    }
+  }, "image/png");
+};
+document.getElementById("copyText").onclick = async () => {
+  const dates = weekDates();
+  const lines = state.days.map((day, i) => {
+    const head = md(dates[i]) + "(" + DAY_NAMES[i] + ")";
+    if (!day.on) return head + " おやすみ";
+    return head + " " + day.time + "〜 " + (day.picks.join(" / ") || "未定") + (day.memo ? "(" + day.memo + ")" : "");
+  });
+  const tag = state.profile.hashtag.trim();
+  const text = "📅" + (state.profile.titleJp || "今週の配信予定") + " " + md(dates[0]) + "〜" + md(dates[6]) + "\n\n" + lines.join("\n") + (tag ? "\n\n" + tag : "");
+  try { await navigator.clipboard.writeText(text); flash("告知文をコピーしたよ"); }
+  catch (e) { prompt("コピーできなかったので、ここから手でコピーしてね", text); }
+};
+
+// ===== 起動 =====
+function refreshAll() {
+  weekInput.value = state.weekStart;
+  creditInput.checked = state.credit;
+  syncCharaSliders();
+  syncBgOpts();
+  buildThemes(); buildFormats(); buildProfile(); buildColors(); buildDays();
+  draw();
+}
+document.getElementById("toolName").textContent = TOOL_NAME;
+try { const url = localStorage.getItem(CHARA_KEY); if (url) setChara(url); } catch (e) {}
+try { const url = localStorage.getItem(BG_KEY); if (url) setBg(url); } catch (e) {}
+refreshAll();
+// フォントの読み込みが終わったら描き直す(最初は標準フォントで描かれるため)
+if (document.fonts) {
+  Promise.all([
+    document.fonts.load(`900 64px Orbitron`),
+    document.fonts.load(`700 40px Orbitron`),
+    document.fonts.load(`800 44px "M PLUS Rounded 1c"`, "今週の配信予定おやすみ未定"),
+  ]).then(draw, draw);
+}
+</script>
+</body>
+</html>
