@@ -26,14 +26,14 @@
   .sample { border: 1px solid #f2c14e; border-radius: 8px; padding: 10px 12px; background: #2b281f; font-size: 13px; color: #f5e3b0; }
   .sample .btns { margin-top: 8px; }
 
-  /* 右下の小さな支援の案内(操作のじゃまにならないよう、小さく・うすめに) */
-  body { padding-bottom: 72px; }
-  .support { position: fixed; right: 12px; bottom: 12px; z-index: 5; max-width: 300px; font-size: 12px; line-height: 1.5; color: #bbb; background: rgba(37,39,45,.92); border: 1px solid #3a3c44; border-radius: 8px; padding: 6px 10px; opacity: .85; }
-  .support:hover, .support:focus-within { opacity: 1; }
+  /* ページのいちばん下・右に置く小さな支援の案内(画面に固定しない) */
+  .support { margin: 24px 0 0 auto; max-width: 340px; font-size: 12px; line-height: 1.5; color: #bbb; text-align: right; }
   .support p { margin: 0; }
   .support .by2 { color: #888; }
   .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-  .preview { flex: 1 1 640px; max-width: 960px; min-width: 0; position: sticky; top: 16px; }
+  .preview { flex: 1 1 640px; max-width: 960px; min-width: 0; }
+  /* 画像と操作パネルが横に並ぶ広さのときだけ、画像をスクロールに追従させる */
+  @media (min-width: 1110px) { .preview { position: sticky; top: 16px; } }
   /* 縦長のときに画面からはみ出さないよう、高さにも上限をつける */
   canvas { display: block; max-width: 100%; max-height: 80vh; width: auto; height: auto; border-radius: 8px; background: #000; margin: 0 auto; }
   .panel { flex: 1 1 420px; max-width: 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
@@ -86,8 +86,7 @@
     body { padding: 10px; }
     header h1 { font-size: 19px; }
     .privacy { font-size: 12px; padding: 6px 10px; }
-    body { padding-bottom: 72px; }
-    .support { position: static; max-width: none; margin-top: 16px; opacity: 1; }
+    .support { max-width: none; margin-top: 16px; padding-bottom: 64px; text-align: left; }
     .wrap { gap: 12px; }
     /* プレビューは上に固定せず、ふつうにスクロールさせる */
     .preview { position: static; flex-basis: 100%; max-width: 100%; }
@@ -149,7 +148,7 @@
     <fieldset id="gameBox">
       <legend>① ゲーム一覧</legend>
       <label for="gameText">1行に1タイトル書いて、「反映する」を押してね</label>
-      <textarea class="gameText" id="gameText" placeholder="例:&#10;雑談&#10;マイクラ = #4ade80"></textarea>
+      <textarea class="gameText" id="gameText" placeholder="例:&#10;雑談&#10;ゲームA = #4ade80"></textarea>
       <div class="btns" style="margin-top:6px"><button id="gameTextApply">反映する</button></div>
       <p class="note">「タイトル = #ff9f43」と書くと色も決められる。下の丸を押して色を変えてもOK。</p>
       <!-- ゲームごとの色。ここで変えると上の欄にも入る -->
@@ -235,7 +234,7 @@
   </div>
 </div>
 
-<!-- 支援とBOOTHへの案内(PCは右下に固定、スマホはページのいちばん下) -->
+<!-- 支援とBOOTHへの案内(ページのいちばん下に置く。画面には固定しない) -->
 <footer class="support">
   <p><a href="https://nezumizuki.booth.pm/items/9110946" target="_blank" rel="noopener">🐭 使ってくれてありがとう！気に入ったら、BOOTHで支援してもらえるとうれしいです</a></p>
   <p class="by2">作った人：<a href="https://x.com/unanoura0" target="_blank" rel="noopener">うな</a></p>
@@ -304,17 +303,17 @@ function defaultState() {
 // はじめて開いた人向けのサンプル(すぐに完成イメージが見えるように)
 function sampleState() {
   const s = defaultState();
-  s.games = ["Minecraft", "APEX LEGENDS", "ポケモン", "スプラトゥーン3", "雑談", "歌枠"];
-  s.colors = { "Minecraft": "#4ade80", "APEX LEGENDS": "#fb7185", "雑談": "#5cc8ff" };
+  s.games = ["ゲームA", "ゲームB", "ゲームC", "ゲームD", "雑談", "歌枠"];
+  s.colors = { "ゲームA": "#4ade80", "ゲームB": "#fb7185", "雑談": "#5cc8ff" };
   Object.assign(s.profile, { name: "なまえ", tagline: "ゲーム実況系VTuber", motto: "みんなたのしく、マイペースに" });
   const plan = [
-    ["Minecraft"],                    "建築のつづき",
-    ["APEX LEGENDS"],                 "ランク",
-    null,                             "",
-    ["雑談"],                          "マシュマロ読み",
-    ["スプラトゥーン3", "APEX LEGENDS"], "参加型",
-    ["ポケモン"],                      "",
-    ["歌枠"],                          "1時間くらい",
+    ["ゲームA"],          "建築のつづき",
+    ["ゲームB"],          "ランク",
+    null,                "",
+    ["雑談"],             "マシュマロ読み",
+    ["ゲームD", "ゲームB"], "参加型",
+    ["ゲームC"],          "",
+    ["歌枠"],             "1時間くらい",
   ];
   s.days.forEach((day, i) => {
     const picks = plan[i * 2];
