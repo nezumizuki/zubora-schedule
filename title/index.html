@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ずぼら配信タイトルメーカー</title>
+<style>
+  /* ===== 画面の見た目(ずぼら週間スケジュールとそろえてある) ===== */
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #1e1f24;
+    color: #eee;
+    font-family: "Yu Gothic UI", "Meiryo", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+  header .by { font-size: 13px; color: #999; }
+  header a { color: #5cc8ff; }
+  .wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .out { flex: 1 1 560px; max-width: 900px; position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .panel { flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; }
+  fieldset { border: 1px solid #444; border-radius: 8px; padding: 10px 12px; margin: 0; }
+  legend { padding: 0 6px; font-weight: bold; }
+  label { font-size: 13px; color: #bbb; }
+  input[type=text], input[type=number], input[type=time] { box-sizing: border-box; padding: 5px 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font-size: 14px; }
+  .note { font-size: 12px; color: #999; margin: 6px 0 0; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { padding: 7px 12px; border: 1px solid #555; border-radius: 6px; background: #2f3138; color: #eee; cursor: pointer; font-size: 13px; }
+  button:hover { filter: brightness(1.2); }
+  button:disabled { opacity: .4; cursor: default; filter: none; }
+  button.active { border-color: #5cc8ff; color: #5cc8ff; font-weight: bold; }
+  .big { padding: 10px 16px; font-size: 15px; font-weight: bold; border: none; background: #f2c14e; color: #222; }
+  .drop { border: 2px dashed #555; border-radius: 8px; padding: 10px; text-align: center; font-size: 13px; color: #aaa; }
+  .drop.over { border-color: #5cc8ff; color: #5cc8ff; }
+  .grid { display: grid; grid-template-columns: 7em 1fr; gap: 6px 8px; align-items: center; }
+  .grid input { width: 100%; }
+
+  /* できあがったタイトルの箱 */
+  .card { background: #25272d; border: 1px solid #3a3c44; border-radius: 10px; padding: 14px 16px; }
+  .card h2 { font-size: 13px; color: #f2c14e; margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .title { font-size: 22px; font-weight: bold; line-height: 1.5; word-break: break-all; min-height: 1.5em; margin-bottom: 10px; }
+  .title.en { font-size: 18px; color: #cfd8e3; }
+  .count { font-size: 12px; color: #999; font-weight: normal; }
+  .count b { color: #ddd; }
+  .count .over { color: #ff8a8a; }
+
+  /* ゲームとタグのボタン */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chips label { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid #555; border-radius: 999px; cursor: pointer; color: #ddd; user-select: none; }
+  .chips input { display: none; }
+  .chips label.on { color: #10141a; font-weight: bold; }
+  .chips .x { margin-left: 2px; color: inherit; opacity: .6; font-size: 12px; }
+  .field { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+  .field input[type=text] { flex: 1; }
+  .sub { font-size: 13px; color: #bbb; margin: 12px 0 0; font-weight: bold; }
+
+  /* 前に使ったタイトル */
+  .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+  .history li { font-size: 13px; padding: 6px 8px; border-radius: 6px; background: #2a2b31; cursor: pointer; word-break: break-all; }
+  .history li:hover { background: #33353d; }
+  .history .when { color: #888; font-size: 11px; margin-right: 6px; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 64px; padding: 6px; border-radius: 6px; border: 1px solid #555; background: #2a2b31; color: #eee; font: 14px "Yu Gothic UI", "Meiryo", sans-serif; resize: vertical; }
+  #msg { color: #f2c14e; min-height: 1.2em; }
+
+  /* ===== スマホ(画面がせまいとき) ===== */
+  @media (max-width: 760px) {
+    body { padding: 10px; }
+    header h1 { font-size: 19px; }
+    .out { position: static; flex-basis: 100%; max-width: 100%; }
+    .panel { flex-basis: 100%; max-width: 100%; }
+    .title { font-size: 19px; }
+    .grid { grid-template-columns: 6em 1fr; }
+    /* 文字の大きさが16px未満だと、iPhoneが入力のたびに画面を拡大してしまう */
+    input[type=text], input[type=number], input[type=time], textarea { font-size: 16px; }
+    button { padding: 9px 12px; font-size: 14px; }
+    .chips label { padding: 6px 11px; }
+    .history { max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏷️ <span id="toolName"></span></h1>
+  <span class="by">made by うな(VTuber)
+    — <a href="https://www.youtube.com/@una_iloverodents" target="_blank">YouTube</a>
+    / <a href="https://www.twitch.tv/una__vtuber_" target="_blank">Twitch</a></span>
+</header>
+
+<div class="wrap">
+  <!-- ===== 左:できあがり ===== -->
+  <div class="out">
+    <div class="card">
+      <h2>配信タイトル <span class="count" id="countJp"></span></h2>
+      <div class="title" id="titleJp"></div>
+      <div class="btns">
+        <button class="big" id="copyJp">タイトルをコピー</button>
+        <button id="plusOne"></button>
+      </div>
+    </div>
+
+    <div class="card" id="enCard">
+      <h2>English title <span class="count" id="countEn"></span></h2>
+      <div class="title en" id="titleEn"></div>
+      <div class="btns"><button id="copyEn">英語タイトルをコピー</button></div>
+    </div>
+
+    <div class="card">
+      <h2>X(Twitter)用の文章</h2>
+      <div class="btns">
+        <button id="copyStart">🔴 配信はじめました</button>
+        <label>開始</label><input type="time" id="soonTime">
+        <button id="copySoon">🕘 このあと配信</button>
+      </div>
+      <p class="note">ボタンを押すと、タイトル・配信URL・ハッシュタグ入りの文章をコピーするよ。</p>
+    </div>
+
+    <p class="note" id="msg"></p>
+
+    <div class="card">
+      <h2>前につけたタイトル <span class="count">クリックでコピー</span></h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </div>
+
+  <!-- ===== 右:操作パネル ===== -->
+  <div class="panel">
+    <fieldset>
+      <legend>① 今日の配信</legend>
+      <div class="sub" style="margin-top:0">ゲーム</div>
+      <div class="chips" id="games"></div>
+      <p class="note" id="todayNote"></p>
+
+      <div class="sub">回数</div>
+      <div class="field">
+        <label><input type="checkbox" id="useNum"> 回数を入れる</label>
+        <input type="number" id="num" min="0" style="width:6em">
+        <span class="note" style="margin:0">回数はゲームごとに覚えておく</span>
+      </div>
+
+      <div class="sub">ひとこと</div>
+      <div class="field">
+        <input type="text" id="phrase" placeholder="例:フルゴラ編、今日こそクリアしたい">
+        <button id="gacha" title="ひとことの案をランダムに出す">🎲 おまかせ</button>
+      </div>
+      <div class="field">
+        <input type="text" id="phraseEn" placeholder="英語のひとこと(なくてもOK) 例:Let's beat the boss!">
+      </div>
+
+      <div class="sub">タグ <span class="note">(押した順に並ぶ。ゲームごとに覚えておく)</span></div>
+      <div class="chips" id="tags"></div>
+      <div class="field">
+        <input type="text" id="newTag" placeholder="タグを追加(例:Mod入り)">
+        <button id="addTag">追加</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>② タイトルの形</legend>
+      <div class="btns" id="patterns"></div>
+      <div id="customBox" style="margin-top:8px">
+        <input type="text" id="custom" style="width:100%">
+        <p class="note">{ゲーム} {回} {ひとこと} {タグ} {名前} が、それぞれの中身に置きかわるよ。空のところは、まわりのカッコごと消える。</p>
+      </div>
+      <label style="display:block;margin-top:8px"><input type="checkbox" id="showEn"> 英語タイトルも作る</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>③ プロフィール</legend>
+      <div class="grid" id="profile"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>④ ゲーム一覧</legend>
+      <div class="drop" id="drop">
+        「ゲーム一覧.txt」をここにドラッグ<br>または <input type="file" id="gameFile" accept=".txt,text/plain">
+      </div>
+      <p class="note">txtを読み込むか、下の欄に直接書くか、どっちでもOK。1行に1タイトル。ずぼら週間スケジュールと同じtxtが使えるよ。</p>
+      <details id="gameTextBox" style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:13px;color:#5cc8ff">txtを使わずに、ここに直接書く</summary>
+        <textarea id="gameText" style="margin-top:8px;min-height:110px" placeholder="1行に1タイトル&#10;例:&#10;雑談&#10;マイクラ"></textarea>
+        <div class="btns" style="margin-top:6px"><button id="gameTextApply">この内容で読み込む</button></div>
+      </details>
+      <div class="btns" style="margin-top:8px">
+        <button id="fromSchedule">週間スケジュールのゲーム一覧を使う</button>
+      </div>
+      <p class="note" id="scheduleNote"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>⑤ 設定のバックアップ</legend>
+      <div class="btns">
+        <button id="exportJson">設定をファイルに保存</button>
+        <button id="importBtn">設定ファイルを読み込む</button>
+        <input type="file" id="importJson" accept=".json,application/json" hidden>
+      </div>
+      <p class="note">入力した内容はブラウザが覚えているけど、ツールのフォルダを動かしたり、別のブラウザで開いたりすると消えちゃう。ときどき保存しておくと安心。</p>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+// ===== 設定 =====
+const TOOL_NAME = "ずぼら配信タイトルメーカー";
+const STORE_KEY = "zubora-title";
+// 週間スケジュールが覚えている内容(同じブラウザで開いていれば読める)
+const SCHEDULE_KEYS = ["zubora-schedule", "una-weekly-schedule"];
+const AUTO_COLORS = ["#ff9f43", "#a78bfa", "#4ade80", "#5cc8ff", "#f472b6", "#facc15", "#fb7185", "#2dd4bf"];
+const LIMIT = { youtube: 100, twitch: 140 };
+
+// 最初から入っているタグ [日本語, 英語]
+const BASE_TAGS = [
+  ["初見さん歓迎", "First-timers welcome"],
+  ["コメント歓迎", "Chat welcome"],
+  ["参加型", "Join us"],
+  ["初見プレイ", "Blind playthrough"],
+  ["アドバイス歓迎", "Tips welcome"],
+  ["ネタバレ禁止", "No spoilers"],
+  ["耐久", "Endurance"],
+  ["雑談", "Chatting"],
+  ["作業", "Work stream"],
+  ["新人VTuber", "New VTuber"],
+];
+
+// タイトルの形
+const PATTERNS = {
+  a: { label: "【ゲーム】ひとこと #回【タグ】", tpl: "【{ゲーム}】{ひとこと} #{回}【{タグ}】" },
+  b: { label: "ひとこと | ゲーム #回【タグ】", tpl: "{ひとこと} | {ゲーム} #{回}【{タグ}】" },
+  c: { label: "【タグ】ゲーム #回 ひとこと", tpl: "【{タグ}】{ゲーム} #{回} {ひとこと}" },
+  d: { label: "【ゲーム】ひとこと #回【タグ / 名前】", tpl: "【{ゲーム}】{ひとこと} #{回}【{タグ} / {名前}】" },
+  custom: { label: "じぶんで書く" },
+};
+
+// 🎲 おまかせ で出る、ひとことの案
+const PHRASES = [
+  "まったりやる", "のんびり進める", "今日こそクリアしたい", "続きから!", "はじめての{ゲーム}",
+  "ちょっとだけやる(たぶん長い)", "寝落ちするまで", "迷子になりながら進む", "ゆるっと遊ぶ",
+  "ボス戦いくぞ", "リベンジします", "コメントに助けてもらう", "わからんけどやる",
+  "全力で楽しむ", "作業しながらおしゃべり", "朝までコース?", "限界まで", "新しいエリアへ",
+  "ひたすら集める", "久しぶりにやる", "練習するぞ", "ぜんぶ回収したい", "みんなと遊ぶ",
+  "まだ序盤", "いよいよ終盤", "初見で挑む", "ここからが本番", "ちょっと休憩回",
+  "効率化したい", "なにも考えずに遊ぶ",
+];
+
+// プロフィールの項目
+const PROFILE_FIELDS = [
+  ["name",    "名前",         "例:うな"],
+  ["url",     "配信URL",      "例:https://www.youtube.com/@〇〇/live"],
+  ["hashtag", "ハッシュタグ", "例:#〇〇配信"],
+];
+
+// ===== 保存しておくデータ =====
+function defaultState() {
+  return {
+    games: ["ゲームA", "ゲームB", "雑談"],
+    colors: {},
+    game: "",
+    // ゲームごとに覚えておくもの { n: 回数, useNum, phrase, phraseEn, tags: [...] }
+    perGame: {},
+    customTags: [],          // [日本語, 英語] で追加したタグ
+    pattern: "a",
+    custom: "【{ゲーム}】{ひとこと} #{回}【{タグ}】",
+    showEn: false,
+    profile: { name: "", url: "", hashtag: "" },
+    soonTime: "21:00",
+    history: [],             // { t: タイトル, d: 日付 }
+    autoDate: "",            // 今日のゲームを自動で選んだ日
+  };
+}
+function mergeState(saved) {
+  const s = Object.assign(defaultState(), saved || {});
+  s.profile = Object.assign(defaultState().profile, s.profile);
+  if (!PATTERNS[s.pattern]) s.pattern = "a";
+  return s;
+}
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { return null; }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+const firstRun = !load();
+let state = mergeState(load());
+
+function allTags() { return BASE_TAGS.concat(state.customTags); }
+function enOf(tag) { const t = allTags().find(x => x[0] === tag); return (t && t[1]) || tag; }
+function colorOf(g) { return state.colors[g] || AUTO_COLORS[Math.max(0, state.games.indexOf(g)) % AUTO_COLORS.length]; }
+function cur() {
+  if (!state.perGame[state.game]) state.perGame[state.game] = { n: 1, useNum: true, phrase: "", phraseEn: "", tags: ["初見さん歓迎", "コメント歓迎"] };
+  return state.perGame[state.game];
+}
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+
+// ===== 週間スケジュールとの連携 =====
+function readSchedule() {
+  for (const key of SCHEDULE_KEYS) {
+    try {
+      const s = JSON.parse(localStorage.getItem(key));
+      if (s && Array.isArray(s.games) && s.games.length) return s;
+    } catch (e) {}
+  }
+  return null;
+}
+// スケジュールに今日のゲームが入っていれば、それを返す
+function scheduleToday(s) {
+  if (!s || !s.weekStart || !Array.isArray(s.days)) return null;
+  const [y, m, d] = s.weekStart.split("-").map(Number);
+  const now = new Date();
+  const idx = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(y, m - 1, d)) / 86400000);
+  const day = s.days[idx];
+  if (idx < 0 || idx > 6 || !day || !day.on || !day.picks || !day.picks.length) return null;
+  return day.picks[0];
+}
+function useSchedule(s, quiet) {
+  state.games = s.games.slice();
+  state.colors = Object.assign({}, s.colors || {});
+  if (s.profile) {
+    if (!state.profile.name && s.profile.name && s.profile.name !== "なまえ") state.profile.name = s.profile.name;
+    if (!state.profile.hashtag && s.profile.hashtag) state.profile.hashtag = s.profile.hashtag;
+  }
+  if (!state.games.includes(state.game)) state.game = state.games[0] || "";
+  save(); refreshAll();
+  if (!quiet) flash("週間スケジュールのゲーム一覧(" + state.games.length + "タイトル)を使ったよ");
+}
+
+// ===== タイトルを組み立てる =====
+// 空になったカッコや区切りを片づける
+function tidy(s) {
+  for (let i = 0; i < 3; i++) {
+    s = s
+      .replace(/【[\s\/|&・]*】|\[[\s\/|&・]*\]|\([\s\/|&・]*\)/g, "")      // 中身が空のカッコ
+      .replace(/([【\[(])[\s\/|&・]+/g, "$1")                                 // カッコの直後の区切り
+      .replace(/[\s\/|&・]+([】\])])/g, "$1")                                 // カッコの直前の区切り
+      .replace(/^[\s\/|・]+|[\s\/|・]+$/g, "")                                // 先頭・末尾の区切り
+      .replace(/\s+[\/|]\s+[\/|]\s+/g, " | ");
+  }
+  // 】のすぐあとの空白はいらない
+  return s.replace(/[ 　]{2,}/g, " ").replace(/】[ 　]+/g, "】").trim();
+}
+function fill(tpl, v) {
+  let s = tpl;
+  if (!v.n) s = s.replace(/\s*#\{回\}/g, "").replace(/第?\{回\}回?/g, "");
+  s = s.replace(/\{(ゲーム|ひとこと|回|タグ|名前)\}/g, (_, k) => ({ ゲーム: v.game, ひとこと: v.phrase, 回: v.n, タグ: v.tags, 名前: v.name }[k] || ""));
+  return tidy(s);
+}
+function makeJp() {
+  const g = cur();
+  const tpl = state.pattern === "custom" ? state.custom : PATTERNS[state.pattern].tpl;
+  return fill(tpl, {
+    game: state.game,
+    phrase: g.phrase.replace(/\{ゲーム\}/g, state.game),
+    n: g.useNum && g.n !== "" ? String(g.n) : "",
+    tags: g.tags.join("&"),
+    name: state.profile.name,
+  });
+}
+function makeEn() {
+  const g = cur();
+  const n = g.useNum && g.n !== "" ? " #" + g.n : "";
+  const tags = g.tags.map(enOf).join(" & ");
+  return tidy(`[${state.game}] ${g.phraseEn}${n} [${tags}]`);
+}
+
+// 文字数(YouTubeは100文字、Twitchは140文字まで)
+function countHtml(s) {
+  const n = [...s].length;
+  const part = (lim, label) => `${label} <b class="${n > lim ? "over" : ""}">${n}</b>/${lim}`;
+  return part(LIMIT.youtube, "YouTube") + " ・ " + part(LIMIT.twitch, "Twitch");
+}
+
+function render() {
+  const jp = makeJp();
+  document.getElementById("titleJp").textContent = jp || "(ゲームを選んでね)";
+  document.getElementById("countJp").innerHTML = countHtml(jp);
+  const en = makeEn();
+  document.getElementById("enCard").style.display = state.showEn ? "" : "none";
+  document.getElementById("titleEn").textContent = en;
+  document.getElementById("countEn").innerHTML = countHtml(en);
+  const g = cur();
+  const plus = document.getElementById("plusOne");
+  plus.textContent = g.useNum ? `配信おわった!次は #${(+g.n || 0) + 1} にする` : "回数なし";
+  plus.disabled = !g.useNum;
+}
+
+// ===== 入力欄を作る =====
+function buildGames() {
+  const box = document.getElementById("games");
+  box.innerHTML = "";
+  state.games.forEach(name => {
+    const lb = document.createElement("label");
+    const rb = document.createElement("input");
+    rb.type = "radio"; rb.name = "game"; rb.checked = state.game === name;
+    lb.className = rb.checked ? "on" : "";
+    lb.style.borderColor = colorOf(name);
+    if (rb.checked) lb.style.background = colorOf(name);
+    rb.onchange = () => { state.game = name; save(); buildGames(); syncGame(); };
+    lb.append(rb, name);
+    box.append(lb);
+  });
+}
+// 選んだゲームの「回数・ひとこと・タグ」を入力欄に出す
+function syncGame() {
+  const g = cur();
+  document.getElementById("useNum").checked = g.useNum;
+  document.getElementById("num").value = g.n;
+  document.getElementById("num").disabled = !g.useNum;
+  document.getElementById("phrase").value = g.phrase;
+  document.getElementById("phraseEn").value = g.phraseEn;
+  buildTags();
+  render();
+}
+function buildTags() {
+  const box = document.getElementById("tags");
+  box.innerHTML = "";
+  const g = cur();
+  allTags().forEach(([tag]) => {
+    const lb = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = g.tags.includes(tag);
+    const paint = () => { lb.className = cb.checked ? "on" : ""; lb.style.background = cb.checked ? "#5cc8ff" : ""; };
+    paint();
+    cb.onchange = () => {
+      g.tags = cb.checked ? [...g.tags, tag] : g.tags.filter(t => t !== tag);
+      paint(); save(); render();
+    };
+    lb.append(cb, tag);
+    // 自分で追加したタグは消せる
+    if (state.customTags.some(t => t[0] === tag)) {
+      const x = document.createElement("span");
+      x.className = "x"; x.textContent = "✕"; x.title = "このタグを一覧から消す";
+      x.onclick = e => {
+        e.preventDefault(); e.stopPropagation();
+        state.customTags = state.customTags.filter(t => t[0] !== tag);
+        Object.values(state.perGame).forEach(p => { p.tags = p.tags.filter(t => t !== tag); });
+        save(); buildTags(); render();
+      };
+      lb.append(x);
+    }
+    box.append(lb);
+  });
+}
+function buildPatterns() {
+  const box = document.getElementById("patterns");
+  box.innerHTML = "";
+  Object.entries(PATTERNS).forEach(([key, p]) => {
+    const b = document.createElement("button");
+    b.textContent = p.label;
+    b.className = state.pattern === key ? "active" : "";
+    b.onclick = () => { state.pattern = key; save(); buildPatterns(); render(); };
+    box.append(b);
+  });
+  document.getElementById("customBox").style.display = state.pattern === "custom" ? "" : "none";
+}
+function buildProfile() {
+  const box = document.getElementById("profile");
+  box.innerHTML = "";
+  PROFILE_FIELDS.forEach(([key, label, ph]) => {
+    const lb = document.createElement("label");
+    lb.textContent = label;
+    const input = document.createElement("input");
+    input.type = "text"; input.placeholder = ph; input.value = state.profile[key];
+    input.oninput = () => { state.profile[key] = input.value; save(); render(); };
+    box.append(lb, input);
+  });
+}
+function buildHistory() {
+  const box = document.getElementById("history");
+  box.innerHTML = "";
+  if (!state.history.length) { box.innerHTML = '<li style="cursor:default;color:#888">まだないよ。コピーしたタイトルがここにたまる</li>'; return; }
+  state.history.forEach(h => {
+    const li = document.createElement("li");
+    const w = document.createElement("span");
+    w.className = "when"; w.textContent = h.d.slice(5).replace("-", "/");
+    li.append(w, h.t);
+    li.onclick = () => copy(h.t, "前のタイトルをコピーしたよ");
+    box.append(li);
+  });
+}
+
+// ===== 入力のイベント =====
+document.getElementById("useNum").onchange = e => { cur().useNum = e.target.checked; save(); syncGame(); };
+document.getElementById("num").oninput = e => { cur().n = e.target.value === "" ? "" : Math.max(0, Math.floor(+e.target.value)); save(); render(); };
+document.getElementById("phrase").oninput = e => { cur().phrase = e.target.value; save(); render(); };
+document.getElementById("phraseEn").oninput = e => { cur().phraseEn = e.target.value; save(); render(); };
+document.getElementById("gacha").onclick = () => {
+  const now = cur().phrase;
+  let p;
+  do { p = PHRASES[Math.floor(Math.random() * PHRASES.length)].replace(/\{ゲーム\}/g, state.game); } while (p === now && PHRASES.length > 1);
+  cur().phrase = p;
+  document.getElementById("phrase").value = p;
+  save(); render();
+};
+function addTag() {
+  const input = document.getElementById("newTag");
+  const t = input.value.trim().replace(/[【】\[\]]/g, "");
+  if (!t) return;
+  if (!allTags().some(x => x[0] === t)) state.customTags.push([t, ""]);
+  if (!cur().tags.includes(t)) cur().tags.push(t);
+  input.value = "";
+  save(); buildTags(); render();
+}
+document.getElementById("addTag").onclick = addTag;
+document.getElementById("newTag").onkeydown = e => { if (e.key === "Enter") addTag(); };
+document.getElementById("custom").oninput = e => { state.custom = e.target.value; save(); render(); };
+document.getElementById("showEn").onchange = e => { state.showEn = e.target.checked; save(); render(); };
+document.getElementById("soonTime").oninput = e => { state.soonTime = e.target.value; save(); };
+document.getElementById("plusOne").onclick = () => {
+  const g = cur();
+  g.n = (+g.n || 0) + 1;
+  save(); syncGame();
+  flash(`${state.game} は次から #${g.n} になるよ。おつかれさま!`);
+};
+
+// ===== コピー =====
+function flash(t) {
+  const m = document.getElementById("msg");
+  m.textContent = t;
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => m.textContent = "", 4000);
+}
+async function copy(text, done) {
+  try { await navigator.clipboard.writeText(text); flash(done); }
+  catch (e) { prompt("コピーできなかったので、ここから手でコピーしてね", text); }
+}
+function remember(t) {
+  state.history = [{ t, d: today() }].concat(state.history.filter(h => h.t !== t)).slice(0, 30);
+  save(); buildHistory();
+}
+document.getElementById("copyJp").onclick = () => { const t = makeJp(); if (!t) return; remember(t); copy(t, "タイトルをコピーしたよ"); };
+document.getElementById("copyEn").onclick = () => copy(makeEn(), "英語タイトルをコピーしたよ");
+function tail() {
+  const p = state.profile;
+  return [p.url.trim(), p.hashtag.trim()].filter(Boolean).map(s => "\n" + s).join("");
+}
+document.getElementById("copyStart").onclick = () => copy("🔴配信はじめました!\n\n" + makeJp() + "\n" + tail(), "「配信はじめました」の文章をコピーしたよ");
+document.getElementById("copySoon").onclick = () => copy("🕘今日は " + (state.soonTime || "--:--") + " から配信するよ!\n\n" + makeJp() + "\n" + tail(), "「このあと配信」の文章をコピーしたよ");
+
+// ===== ゲーム一覧(テキストファイル) =====
+function readGameText(text) {
+  const list = [];
+  text.replace(/^﻿/, "").split(/\r?\n/).map(s => s.trim()).filter(s => s && !s.startsWith("#")).forEach(line => {
+    const m = line.match(/^(.+?)\s*[=＝]\s*(#[0-9a-fA-F]{6})$/);
+    const name = m ? m[1] : line;
+    if (m) state.colors[name] = m[2].toLowerCase();
+    if (!list.includes(name)) list.push(name);
+  });
+  if (!list.length) { flash("ゲームが1つも見つからなかった…"); return; }
+  state.games = list;
+  if (!list.includes(state.game)) state.game = list[0];
+  save(); refreshAll();
+  flash(list.length + "タイトル読み込んだよ");
+}
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => readGameText(reader.result);
+  reader.readAsText(file, "utf-8");
+}
+document.getElementById("gameFile").onchange = e => { if (e.target.files[0]) readFile(e.target.files[0]); };
+const drop = document.getElementById("drop");
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); };
+// 直接書く欄:開いたときは、いまのゲーム一覧を入れておく
+const gameText = document.getElementById("gameText");
+document.getElementById("gameTextBox").ontoggle = e => {
+  if (e.target.open) gameText.value = state.games.map(g => state.colors[g] ? g + " = " + state.colors[g] : g).join("\n");
+};
+document.getElementById("gameTextApply").onclick = () => {
+  if (!gameText.value.trim()) { flash("1行に1タイトル書いてね"); return; }
+  readGameText(gameText.value);
+};
+document.getElementById("fromSchedule").onclick =() => { const s = readSchedule(); if (s) useSchedule(s); };
+
+// ===== 設定のバックアップ =====
+document.getElementById("exportJson").onclick = () => {
+  const a = document.createElement("a");
+  a.download = "タイトル設定.json";
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ tool: TOOL_NAME, version: 1, state })], { type: "application/json" }));
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+const importInput = document.getElementById("importJson");
+document.getElementById("importBtn").onclick = () => importInput.click();
+importInput.onchange = () => {
+  const file = importInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.tool === TOOL_NAME) { state = mergeState(data.state); save(); refreshAll(); flash("設定を読み込んだよ"); }
+      else if (data.state && Array.isArray(data.state.games)) { useSchedule(data.state, true); flash("スケジュールの設定から、ゲーム一覧と名前を読み込んだよ"); }
+      else throw new Error();
+    } catch (e) { flash("このファイルは読み込めなかった。保存した設定ファイル(.json)を選んでね"); }
+    importInput.value = "";
+  };
+  reader.readAsText(file, "utf-8");
+};
+
+// ===== 起動 =====
+function refreshAll() {
+  if (!state.games.includes(state.game)) state.game = state.games[0] || "";
+  document.getElementById("custom").value = state.custom;
+  document.getElementById("showEn").checked = state.showEn;
+  document.getElementById("soonTime").value = state.soonTime;
+  const s = readSchedule();
+  document.getElementById("fromSchedule").disabled = !s;
+  document.getElementById("scheduleNote").textContent = s ? "" : "(同じブラウザで週間スケジュールを使っていると押せるよ)";
+  buildGames(); buildPatterns(); buildProfile(); buildHistory(); syncGame();
+}
+document.getElementById("toolName").textContent = TOOL_NAME;
+(function start() {
+  const s = readSchedule();
+  // はじめて開いたときは、週間スケジュールのゲーム一覧があればそれを使う
+  if (firstRun && s) useSchedule(s, true);
+  // 今日のゲームがスケジュールに入っていれば、その日の最初の1回だけ自動で選ぶ
+  const g = scheduleToday(s);
+  if (g && state.autoDate !== today() && state.games.includes(g)) {
+    state.game = g; state.autoDate = today(); save();
+    document.getElementById("todayNote").textContent = "📅 週間スケジュールから、今日のゲーム「" + g + "」を選んだよ";
+  }
+  refreshAll();
+})();
+</script>
+</body>
+</html>
